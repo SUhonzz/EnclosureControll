@@ -39,7 +39,7 @@
 	#define SET_DISPLAY_ON				0xAF
 	#define SET_DISPLAY_OFF				0xAE
 	#define SET_DISPLAY_NORMAL			0xA6
-	#define SET_DISPLAY_INVERSE		0xA7
+	#define SET_DISPLAY_INVERSE			0xA7
 	#define ENTIRE_DISPLAY_ON			0xA4
 	
 	#define SET_MEMORY_ADDR_MODE		0x20

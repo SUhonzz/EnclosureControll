@@ -1,0 +1,126 @@
+/*
+ * elektr.1.c
+ *
+ * Created: 31.05.2024 14:01:21
+ * Author : 49170
+ */ 
+
+#define F_CPU 16000000UL
+
+#include <avr/io.h>
+#include <util/delay.h>
+#include <avr/interrupt.h>
+#include "oled_ssd1306.h"
+
+
+void PWM_G_init()
+{
+	TCCR0A |= ((1<<WGM00)	|	(1<<WGM01));	// Fast PWM
+	TCCR0A |= ((1<<COM0A0)	|	(1<<COM0A1));	// Inverting Mode - common anode
+	TCCR0B |= ((1<<CS00)	|	(1<<CS02));		// Prescaler 1024
+	OCR0A = 0;
+}
+
+void PWM_R_init()
+{
+	TCCR0A |= ((1<<COM0B0)	|	(1<<COM0B1));	// Inverting Mode - common anode
+	OCR0B = 0;
+}
+
+void PWM_B_init()
+{
+	TCCR1A |= (1<<WGM10);						// Fast PWM 8Bit
+	TCCR1B |= (1<<WGM12);						// Fast PWM 8Bit
+	TCCR1A |= ((1<<COM1A0)	|	(1<<COM1A1));	// Inverting Mode - common anode
+	TCCR1B |= ((1<<CS10)	|	(CS12));		// Prescaler 1024
+	OCR0A = 0;
+}
+
+
+int main(void)
+{
+    
+	DDRD |= (1<<5);
+	DDRD |= (1<<6);
+	DDRB |= (1<<1);
+	
+	PORTD |= (1<<5);
+	PORTD |= (1<<6);
+	PORTB |= (1<<1);
+	
+	PWM_G_init();
+	PWM_R_init();
+	PWM_B_init();
+	
+	oled_init();7
+	oled_font_size(2);
+	oled_gotoxy(0,1);
+	oled_write("Hello");
+	oled_gotoxy(0,6);
+	oled_write("World");
+	
+	sei();
+	
+    while (1) 
+    {		
+		PORTD &= ~(1<<5);
+		_delay_ms(500);
+		PORTD |= (1<<5);
+		_delay_ms(500);
+		
+		PORTD &= ~(1<<6);
+		_delay_ms(500);
+		PORTD |= (1<<6);
+		_delay_ms(500);
+	
+		PORTB &= ~(1<<1);
+		_delay_ms(500);
+		PORTB |= (1<<1);
+		_delay_ms(500);
+		
+		for (int i = 1; i <= 255; i++)
+		{
+			OCR0A = i;
+			if(i <= 10){
+				_delay_ms(500);
+				}else{
+				if(i <= 20){
+					_delay_ms(200);
+					}else{
+					_delay_ms(50);
+				}
+			}
+		}
+		OCR0A = 0;
+		
+		for (int i = 0; i <= 255; i++)
+		{
+			OCR0B = i;
+			if(i <= 10){
+				_delay_ms(500);
+			}else{
+				if(i <= 20){
+					_delay_ms(200);
+				}else{
+					_delay_ms(50);
+				}
+			}
+		}
+		OCR0B = 0;
+	
+		for (int i = 0; i <= 255; i++)
+		{
+			OCR1A = i;
+			if(i <= 10){
+				_delay_ms(500);
+				}else{
+				if(i <= 20){
+					_delay_ms(200);
+					}else{
+					_delay_ms(50);
+				}
+			}
+		}
+		OCR1A = 0;
+	}
+}
