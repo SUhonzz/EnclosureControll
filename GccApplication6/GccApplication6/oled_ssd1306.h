@@ -24,6 +24,7 @@
 
 	void oled_init(void);
 	void oled_clear_screen(void);
+	void oled_clear_row(int y);
 	void oled_font_size (uint8_t byte);
 	void oled_gotoxy(uint8_t x, uint8_t y);
 	void oled_write_char(char c);

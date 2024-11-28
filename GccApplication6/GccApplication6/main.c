@@ -8,22 +8,28 @@
 #define F_CPU				16000000UL
 #define UART_BAUD_RATE		9600
 
+// DEBUG
+//#define debug
+#ifdef debug
+	#define log(...) oled_write(__VA_ARGS__) // Wenn DEBUG definiert ist, führt log() oled_write aus
+#else
+	#define log(...) // Wenn DEBUG nicht definiert ist, macht log() nichts
+#endif
+
+// INCLUDES
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <util/delay.h>
 #include "uart.h"
 #include "oled_ssd1306.h"
 
-char			UART_IN_BUF			[20+1]		;
-char			out_buf				[20+1]		;
-int16_t			c					= 0			;
 
-int16_t			count				= 0			;
-uint8_t			counting_var		= 0			;
 
+// DEFINITIONS
 #define VENT_OUT PC0
 #define HEAT_OUT PC1
 #define PTC_1IN ADC6
@@ -45,12 +51,12 @@ int PTC2_VAL;	//Temp. 2
 #define NOC2 PB0
 #define NOC3 PB1
 
-typedef struct {
-	volatile uint8_t *port;  // pointer to the PORT-register
-	uint8_t pin;             // bit mask for the Pin
+// PINS
+typedef struct {		// function for creating a pin-struct out of a string (e.g. "PC2")
+	volatile uint8_t *port;	// pointer to the PORT-register
+	uint8_t pin;			// bit mask for the Pin
 } Pin;
-// function for creating a pin-struct out of a string (e.g. "PC2")
-Pin createPin(const char* pinString) {
+Pin createPin(const char* pinString) {	// function, to set a pin to HIGH
 	Pin p;
 
 	// checks, which port the pin-string contains
@@ -75,16 +81,20 @@ Pin createPin(const char* pinString) {
 
 	return p;
 }
-// function, to set a pin to HIGH
-void setPinHigh(Pin p) {
+void setPinHigh(Pin p) {	// function, to set a pin to LOW
 	*(p.port) |= (1 << p.pin);  // sets the corresponding bit
 }
-// function, to set a pin to LOW
 void setPinLow(Pin p) {
 	*(p.port) &= ~(1 << p.pin);  // deletes the corresponding bit
 }
 // works
 
+// UART
+char			UART_IN_BUF			[20+1]		;
+char			out_buf				[20+1]		;
+int16_t			c					= 0			;
+int16_t			count				= 0			;
+uint8_t			counting_var		= 0			;
 void UART_REC()
 {
 	c = uart_getc();
@@ -103,7 +113,6 @@ void UART_REC()
 		UART_IN_BUF[count] = '\0';
 	}
 }
-
 void UART_SEND_DATA()
 {
 	counting_var += 1;
@@ -114,7 +123,6 @@ void UART_SEND_DATA()
 	oled_write_str(out_buf);
 	//_delay_ms(1000);
 }
-
 void UART_SHOW_DATA()
 {
 	for (int i=0; i<21; i++) 
@@ -133,20 +141,19 @@ void UART_SHOW_DATA()
 	}
 }
 
+// PWM
 void PWM_INIT()
 {
 	TCCR0A |= ((1<<WGM00)	|	(1<<WGM01));	// Fast PWM 8Bit
 	TCCR0A |= ((1<<COM0A0)	|	(1<<COM0A1));	// Inverting Mode - common anode
 	TCCR0A |= ((1<<CS00)	|	(1<<CS02));		// Prescaler 1024
 }
-
 void TIMER_INIT()
 {
 	TCCR1A = 0;									// normal mode
 	TCCR1B |= ((1<<CS11)	|	(1<<CS10));		// Prescaler 64
 	TIMSK1 |= (1<<TOIE1);						// Enable Timer1 overflow interrupt
 }
-
 ISR(TIMER1_OVF_vect)
 {
 	Pin LED = createPin("PC3");
@@ -166,6 +173,7 @@ ISR(TIMER1_OVF_vect)
     }
 }
 
+// ADC
 void ADC_INIT()
 {
 	ADMUX	|= ((1<<MUX1)	|	(1<<MUX2));
@@ -175,7 +183,6 @@ void ADC_INIT()
 	ADCSRA	|= (1<<ADSC);
 	while (ADCSRA & (1<<ADSC)) {};	//trash first value
 }
-
 void ADC_READ_PRINT()
 {
 		//ADC6
@@ -198,55 +205,173 @@ void ADC_READ_PRINT()
 	oled_write("average: %i", avg);
 }
 
+// BUTTONS
+bool S1 = false;
+bool S2 = false;
+bool S3 = false;
 void BUTTON_CHECK()
 {
 	if (PIND & (1 << BUTTON1))
 	{
+		S1 = true;
 		oled_gotoxy(0,3);
-		oled_write("button 1 pressed");
+		log("button 1 pressed");
+		while (PIND & (1 << BUTTON1)){}
 	}
 	if (PIND & (1 << BUTTON2))
 	{
+		S2 = true;
 		oled_gotoxy(0,3);
-		oled_write("button 2 pressed");
+		log("button 2 pressed");
+		while (PIND & (1 << BUTTON1)){}
 	}
 	if (PIND & (1 << BUTTON3))
 	{
+		S3 = true;
 		oled_gotoxy(0,3);
-		oled_write("button 3 pressed");
+		log("button 3 pressed");
+		while (PIND & (1 << BUTTON1)){}
 	}
 }
 //works
+
+// OLED
+/*void write_name(char* name) {
+	static char scroll_name[100]; // Static array to store the name for scrolling
+	static int offset = 0;         // Offset for scrolling position
+
+	// If name length is greater than 6, prepare the scroll_name array
+	if (strlen(name) > 6) {
+		// Fill the scroll_name array with the name followed by a space
+		strcpy(scroll_name, name);
+		strcat(scroll_name, " "); // Append a space at the end
+		} else {
+		oled_write(name);  // Display the name directly if length is <= 6
+		return;
+	}
+
+	// Rotate the name for scrolling (move one character each time)
+	oled_write(&scroll_name[offset]);  // Display the current "slice" of the name
+
+	// Update the offset for next scroll
+	offset++;
+	if (scroll_name[offset] == '\0') {
+		offset = 0;  // Reset the offset if we reach the end
+	}
+}*/
+
+
+
+
 
 int main(void)
 {
 	
 	DDRC	|=	(1<<0);		// VENTOUT RELAIS
 	DDRC	|=	(1<<1);		// HEATOUT	
+	
+	// Inits
     //uart_init(UART_BAUD_SELECT(UART_BAUD_RATE, F_CPU));
 	oled_init();
 	ADC_INIT();
 	PWM_INIT();
+	
+	// Pins
 	Pin VO = createPin("PD6");
-		oled_write("on");
-
+	
+	// Menu
+	char name[] = "3Dprinter";
+	int mode = 0;	// 0: automatic, 1: manual
+	void toggle_mode() {
+		mode = (mode + 1) % 2;  // Toggle between 0 and 1
+		// %(max_mode + 1)
+		S1 = false;
+	}
+	bool heat = false;
+	bool vent = false;
+	int temp_set = 22;
+	
+	log("on");
 	
 	sei();
 	
     while (1) 
     {
-		
-		setPinHigh(VO);
+		/*setPinHigh(VO);
 		_delay_ms(100);
 		setPinLow(VO);
-		_delay_ms(100);
+		_delay_ms(100);*/
 		
 		//ADC_READ_PRINT();	//temperature
 
 		//OCR0A = 30;
 		
+		// Display Menu
+		oled_gotoxy(0,0);	// Name
+		oled_write("3D");
+		oled_gotoxy(6,0);	// Mode
+		if (mode == 0)
+			oled_write("A");	// automatic
+		else
+			oled_write("M");	// manual
+		oled_gotoxy(8,0);	// Temp1
+		oled_write("24.7°C");
+		oled_gotoxy(8,1);	// Temp2
+		oled_write("7.8°C");
+		oled_gotoxy(0,6);	// Heat
+		oled_write("Heat");
+		oled_gotoxy(0,7);
+		if (heat == true)
+			oled_write("on");
+		else
+			oled_write("off");
+		oled_gotoxy(2,3);	// temp control
+		oled_font_size(1);
+		oled_write("22°C");
+		oled_font_size(0);
+		oled_gotoxy(5,6);	// Vent
+		oled_write("Vent");
+		oled_gotoxy(5,7);	
+		if (vent == true)
+			oled_write("on");
+		else
+			oled_write("off");
+		oled_gotoxy(15,0);	// buttons
+		oled_write("+");
+		oled_gotoxy(15,3);
+		oled_write("-");
+		oled_gotoxy(13,6);
+		oled_write("swi");
+		oled_gotoxy(13,7);
+		oled_write("tch");
+		
 		BUTTON_CHECK();
-
+		if (S1 == true)
+			toggle_mode();
+			
+		switch (mode) {
+			case 0:					//automatic
+				if (S2 == true) {
+					temp_set += 1;
+					S2 = false;
+				}else if (S3 == true) {
+					temp_set -= 1;
+					S3 = false;
+				}else break;
+			case 1:					//manual
+				if (S2 == true) {
+					heat = true;
+					vent = false;
+					S2 = false;
+				}else if (S3 == true) {
+					heat = false;
+					vent = true;
+					S3 = false;
+				}else break;
+				oled_clear_row(7);
+			default:
+				break;
+		}
     }
 }
 

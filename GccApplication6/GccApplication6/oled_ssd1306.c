@@ -96,6 +96,35 @@ void oled_clear_screen (void){
 	oled_gotoxy(0,0);
 }
 
+void oled_clear_row (int y){
+	oled_gotoxy(0,y);
+	i2c_start();
+	i2c_byte(DATA);
+	for (uint16_t i = 0; i < 128; i++) {	// 128 * (64 / Byte)
+		i2c_byte(0);
+	}
+	i2c_stop();
+	oled_gotoxy(0,0);
+}
+
+void oled_clear_area(int x1, int x2, int y1, int y2) {
+	// Loop through the rows (pages) from start_row to end_row
+	for (int y = y1*8; y <= (y2+1)*8; y++) {
+		// Set the position to the beginning of the current row
+		oled_gotoxy(x1, y);  // Start column, current row (page)
+
+		i2c_start();
+		i2c_byte(DATA);
+
+		// Clear the specified area in the current row by sending 0 for each column
+		for (int x = x1*8; x <= (x2+1)*8; x++) {
+			i2c_byte(0);  // Send zero to clear the pixel at that position
+		}
+
+		i2c_stop();
+	}
+}
+
 //***************************************************************************************
 void oled_gotoxy (uint8_t x, uint8_t y){
 	oled_x = x;
