@@ -11,7 +11,7 @@
 // DEBUG
 //#define debug
 #ifdef debug
-	#define log(...) oled_write(__VA_ARGS__) // Wenn DEBUG definiert ist, führt log() oled_write aus
+	#define log(...) oled_write(__VA_ARGS__) // Wenn DEBUG definiert ist, fï¿½hrt log() oled_write aus
 #else
 	#define log(...) // Wenn DEBUG nicht definiert ist, macht log() nichts
 #endif
@@ -233,6 +233,82 @@ void BUTTON_CHECK()
 		while (PIND & (1 << BUTTON1)){}
 	}
 }
+
+
+
+void write_pos_A(char* str){
+	posx = 0;
+	posy = 0;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+
+void write_pos_B(char* str){
+	posx = 6;
+	posy = 0;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+
+void write_pos_C(char* str){
+	posx = 8;
+	posy = 0;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+
+void write_pos_D(char* str){
+	posx = 8;
+	posy = 1;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+
+void write_pos_E(char* str){
+	posx = 2;
+	posy = 3;
+	oled_gotoxy(posx,posy);
+	oled_font_size(1);
+	oled_write("%s", str);
+	oled_font_size(0);
+}
+
+void write_pos_F(char* str){
+	posx = 0;
+	posy = 6;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+
+void write_pos_G(char* str){
+	posx = 15;
+	posy = 0;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+void write_help()
+{
+	oled_gotoxy(15,0);
+	oled_write("+");
+	oled_gotoxy(15,3);
+	oled_write("-");
+	oled_gotoxy(12,6);
+	oled_write("Mode");
+}
+
+void write_pos_H(char* str){
+	posx = 15;
+	posy = 3;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+
+void write_pos_I(char* str){
+	posx = 12;
+	posy = 6;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
 //works
 
 // OLED
@@ -287,8 +363,7 @@ int main(void)
 		// %(max_mode + 1)
 		S1 = false;
 	}
-	bool heat = false;
-	bool vent = false;
+	int state = 0;	// 0: Heat, 1: Vent, 2: Off
 	int temp_set = 22;
 	
 	log("on");
@@ -308,47 +383,34 @@ int main(void)
 		
 	
 		
-		string t = "22°C";
+		string t = "22ï¿½C";
 		oled_gotoxy(0,0);
 		oled_write("%s", t);
 		// Display Menu
-		oled_gotoxy(0,0);	// Name
-		oled_write("3D");
+		
+		write_pos_A("3D"); //NAME
+		
 		oled_gotoxy(6,0);	// Mode
 		if (mode == 0)
-			oled_write("A");	// automatic
+			write_pos_B("A");
 		else
-			oled_write("M");	// manual
-		oled_gotoxy(8,0);	// Temp1
-		oled_write("24.7°C");
-		oled_gotoxy(8,1);	// Temp2
-		oled_write("7.8°C");
-		oled_gotoxy(0,6);	// Heat
-		oled_write("Heat");
-		oled_gotoxy(0,7);
-		if (heat == true)
-			oled_write("on");
-		else
-			oled_write("off");
-		oled_gotoxy(2,3);	// temp control
-		oled_font_size(1);
-		oled_write("22°C");
-		oled_font_size(0);
-		oled_gotoxy(5,6);	// Vent
-		oled_write("Vent");
-		oled_gotoxy(5,7);	
-		if (vent == true)
-			oled_write("on");
-		else
-			oled_write("off");
-		oled_gotoxy(15,0);	// buttons
-		oled_write("+");
-		oled_gotoxy(15,3);
-		oled_write("-");
-		oled_gotoxy(13,6);
-		oled_write("swi");
-		oled_gotoxy(13,7);
-		oled_write("tch");
+			write_pos_B("M");
+
+		write_pos_C("24.7ï¿½C"); //TEMP1
+		
+		write_pos_D("7.8ï¿½C"); //TEMP2
+
+		write_pos_E("22"); //Med Temp
+
+	if (state = 0){
+		write_pos_F("Heat"); //state
+	}
+	else if(state = 1) {
+		write_pos_F("Vent"); //state
+	}
+	else write_pos_F("Off"); //state
+	
+	write_help();
 		
 		BUTTON_CHECK();
 		if (S1 == true)
