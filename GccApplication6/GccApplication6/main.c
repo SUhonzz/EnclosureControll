@@ -183,7 +183,7 @@ void ADC_INIT()
 	ADCSRA	|= (1<<ADSC);
 	while (ADCSRA & (1<<ADSC)) {};	//trash first value
 }
-void ADC_READ_PRINT()
+void ADC_READ()
 {
 		//ADC6
 	ADMUX	|=	((1<<MUX1)	|	(1<<MUX2));	// clear and select channel
@@ -195,14 +195,7 @@ void ADC_READ_PRINT()
 	ADCSRA	|=	(1<<ADSC);
 	while (ADCSRA & (1<<ADSC)) {};
 	PTC2_VAL = (ADCW * 5.0 / 1024.0) * 100;
-		//output, display
-	oled_font_size(3);
-	oled_gotoxy(1, 1);
-	oled_write("Temp 1: %i", PTC1_VAL);
-	oled_gotoxy(1, 5);
-	oled_write("Temp 2: %i", PTC2_VAL);
-	int avg = (PTC1_VAL + PTC2_VAL)/2;
-	oled_write("average: %i", avg);
+	
 }
 
 // BUTTONS
@@ -345,7 +338,7 @@ int main(void)
 	
 	DDRC	|=	(1<<0);		// VENTOUT RELAIS
 	DDRC	|=	(1<<1);		// HEATOUT	
-	
+	int cnt = 0;
 	// Inits
     //uart_init(UART_BAUD_SELECT(UART_BAUD_RATE, F_CPU));
 	oled_init();
@@ -372,6 +365,7 @@ int main(void)
 	
     while (1) 
     {
+
 		/*setPinHigh(VO);
 		_delay_ms(100);
 		setPinLow(VO);
@@ -381,7 +375,13 @@ int main(void)
 
 		//OCR0A = 30;
 		
-	
+		cnt++;
+		if (cnt > 1000)
+		{
+			ADC_READ();
+			cnt = 0;
+		}
+		
 		
 		string t = "22�C";
 		oled_gotoxy(0,0);
@@ -396,11 +396,11 @@ int main(void)
 		else
 			write_pos_B("M");
 
-		write_pos_C("24.7�C"); //TEMP1
+		write_pos_C("%d", PTC1_VAL); //TEMP1
 		
-		write_pos_D("7.8�C"); //TEMP2
+		write_pos_D("%d", PTC2_VAL); //TEMP2
 
-		write_pos_E("22"); //Med Temp
+		write_pos_E("%u",(PTC1_VAL+PTC2_VAL)/2); //Med Temp
 
 	if (state = 0){
 		write_pos_F("Heat"); //state
