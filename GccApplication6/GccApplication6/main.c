@@ -34,8 +34,12 @@
 #define HEAT_OUT PC1
 #define PTC_1IN ADC6
 int PTC1_VAL;	//Temp. 1
+char PTC1_char[10];
 #define PTC2IN ADC7
 int PTC2_VAL;	//Temp. 2
+char PTC2_char[10];
+int avg_temp;
+char avg_tmp[10];
 #define PWM_OUT PC3
 #define NOC0 PC2
 #define SDA_DISP PC4
@@ -190,12 +194,16 @@ void ADC_READ()
 	ADCSRA	|=	(1<<ADSC);					// start conversion
 	while (ADCSRA & (1<<ADSC)) {};			// wait til finish conversion
 	PTC1_VAL = (ADCW * 5.0 / 1024.0) * 100;	// convert temperature
+	sprintf(PTC1_char, "%d°C", PTC1_VAL);
 		//ADC7
 	ADMUX	|=	((1<<MUX1)	|	(1<<MUX2)	|	(1<<MUX3));
 	ADCSRA	|=	(1<<ADSC);
 	while (ADCSRA & (1<<ADSC)) {};
 	PTC2_VAL = (ADCW * 5.0 / 1024.0) * 100;
-	
+	sprintf(PTC2_char, "%d°C", PTC2_VAL);
+		//average
+	avg_temp = (PTC1_VAL+PTC2_VAL)/2;
+	sprintf(avg_tmp, "%d°C", avg_temp);
 }
 
 // BUTTONS
@@ -226,59 +234,72 @@ void BUTTON_CHECK()
 		while (PIND & (1 << BUTTON1)){}
 	}
 }
+//works
 
-
-
+	// Name
 void write_pos_A(char* str){
-	posx = 0;
-	posy = 0;
+	int posx = 0;
+	int posy = 0;
 	oled_gotoxy(posx,posy);
 	oled_write("%s", str);
 }
-
+	// Mode
 void write_pos_B(char* str){
-	posx = 6;
-	posy = 0;
+	int posx = 6;
+	int posy = 0;
 	oled_gotoxy(posx,posy);
 	oled_write("%s", str);
 }
-
+	// Temp1
 void write_pos_C(char* str){
-	posx = 8;
-	posy = 0;
+	int posx = 8;
+	int posy = 0;
 	oled_gotoxy(posx,posy);
 	oled_write("%s", str);
 }
-
+	// Temp2
 void write_pos_D(char* str){
-	posx = 8;
-	posy = 1;
+	int posx = 8;
+	int posy = 1;
 	oled_gotoxy(posx,posy);
 	oled_write("%s", str);
 }
-
+	// average temp
 void write_pos_E(char* str){
-	posx = 2;
-	posy = 3;
+	int posx = 2;
+	int posy = 3;
 	oled_gotoxy(posx,posy);
 	oled_font_size(1);
 	oled_write("%s", str);
 	oled_font_size(0);
 }
-
+	// setting (vent/heat; set temp)
 void write_pos_F(char* str){
-	posx = 0;
-	posy = 6;
+	int posx = 0;
+	int posy = 6;
 	oled_gotoxy(posx,posy);
 	oled_write("%s", str);
 }
-
+	// button legend positions (not used -> free)
 void write_pos_G(char* str){
-	posx = 15;
-	posy = 0;
+	int posx = 15;
+	int posy = 0;
 	oled_gotoxy(posx,posy);
 	oled_write("%s", str);
 }
+void write_pos_H(char* str){
+	int posx = 15;
+	int posy = 3;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+void write_pos_I(char* str){
+	int posx = 12;
+	int posy = 6;
+	oled_gotoxy(posx,posy);
+	oled_write("%s", str);
+}
+	// button legend
 void write_help()
 {
 	oled_gotoxy(15,0);
@@ -289,23 +310,9 @@ void write_help()
 	oled_write("Mode");
 }
 
-void write_pos_H(char* str){
-	posx = 15;
-	posy = 3;
-	oled_gotoxy(posx,posy);
-	oled_write("%s", str);
-}
-
-void write_pos_I(char* str){
-	posx = 12;
-	posy = 6;
-	oled_gotoxy(posx,posy);
-	oled_write("%s", str);
-}
-//works
-
 // OLED
-/*void write_name(char* name) {
+void write_name(char* name) {
+	oled_gotoxy(0,0);
 	static char scroll_name[100]; // Static array to store the name for scrolling
 	static int offset = 0;         // Offset for scrolling position
 
@@ -315,19 +322,19 @@ void write_pos_I(char* str){
 		strcpy(scroll_name, name);
 		strcat(scroll_name, " "); // Append a space at the end
 		} else {
-		oled_write(name);  // Display the name directly if length is <= 6
+		oled_write("%s", name);  // Display the name directly if length is <= 6
 		return;
 	}
 
 	// Rotate the name for scrolling (move one character each time)
-	oled_write(&scroll_name[offset]);  // Display the current "slice" of the name
+	oled_write("%s", &scroll_name[offset]);  // Display the current "slice" of the name
 
 	// Update the offset for next scroll
 	offset++;
 	if (scroll_name[offset] == '\0') {
 		offset = 0;  // Reset the offset if we reach the end
 	}
-}*/
+}
 
 
 
@@ -349,11 +356,11 @@ int main(void)
 	Pin VO = createPin("PD6");
 	
 	// Menu
-	char name[] = "3Dprinter";
+	char name[] = "3D";
 	int mode = 0;	// 0: automatic, 1: manual
 	void toggle_mode() {
 		mode = (mode + 1) % 2;  // Toggle between 0 and 1
-		// %(max_mode + 1)
+		// %(max_mode + 1)		// for more modes
 		S1 = false;
 	}
 	int state = 0;	// 0: Heat, 1: Vent, 2: Off
@@ -381,14 +388,9 @@ int main(void)
 			ADC_READ();
 			cnt = 0;
 		}
-		
-		
-		string t = "22ï¿½C";
-		oled_gotoxy(0,0);
-		oled_write("%s", t);
+
 		// Display Menu
-		
-		write_pos_A("3D"); //NAME
+		write_pos_A(name); //NAME
 		
 		oled_gotoxy(6,0);	// Mode
 		if (mode == 0)
@@ -396,21 +398,21 @@ int main(void)
 		else
 			write_pos_B("M");
 
-		write_pos_C("%d", PTC1_VAL); //TEMP1
+		write_pos_C(PTC1_char); //TEMP1
 		
-		write_pos_D("%d", PTC2_VAL); //TEMP2
+		write_pos_D(PTC2_char); //TEMP2
 
-		write_pos_E("%u",(PTC1_VAL+PTC2_VAL)/2); //Med Temp
+		write_pos_E(avg_tmp); //Med Temp
 
-	if (state = 0){
-		write_pos_F("Heat"); //state
-	}
-	else if(state = 1) {
-		write_pos_F("Vent"); //state
-	}
-	else write_pos_F("Off"); //state
+		if (state = 0){
+			write_pos_F("Heat"); //state
+		}
+		else if(state = 1) {
+			write_pos_F("Vent"); //state
+		}
+		else write_pos_F("Off"); //state
 	
-	write_help();
+		write_help();
 		
 		BUTTON_CHECK();
 		if (S1 == true)
@@ -427,12 +429,10 @@ int main(void)
 				}else break;
 			case 1:					//manual
 				if (S2 == true) {
-					heat = true;
-					vent = false;
+					state = 0;
 					S2 = false;
 				}else if (S3 == true) {
-					heat = false;
-					vent = true;
+					state = 1;
 					S3 = false;
 				}else break;
 				oled_clear_row(7);
