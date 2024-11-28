@@ -306,6 +306,11 @@ int main(void)
 
 		//OCR0A = 30;
 		
+	
+		
+		string t = "22°C";
+		oled_gotoxy(0,0);
+		oled_write("%s", t);
 		// Display Menu
 		oled_gotoxy(0,0);	// Name
 		oled_write("3D");
