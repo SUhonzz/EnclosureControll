@@ -180,7 +180,7 @@ ISR(TIMER1_OVF_vect)
 // ADC
 void ADC_INIT()
 {
-	ADMUX	|= ((1<<MUX1)	|	(1<<MUX2));
+	ADMUX	|= ((1<<MUX0)	|	(1<<MUX1)	|	(1<<MUX2));
 	ADMUX	|= (1<<REFS0);	//Voltage Reference: AVCC with external capacitor at AREF pin
 	ADCSRA	|= ((1<<ADPS0)	|	(1<<ADPS1)	|	(ADPS2));	//Prescaler Division Factor: 128
 	ADCSRA	|= (1<<ADEN);
@@ -190,13 +190,13 @@ void ADC_INIT()
 void ADC_READ()
 {
 		//ADC6
-	ADMUX	|=	((1<<MUX1)	|	(1<<MUX2));	// clear and select channel
+	ADMUX	&=	~(1<<MUX0);	// clear and select channel
 	ADCSRA	|=	(1<<ADSC);					// start conversion
 	while (ADCSRA & (1<<ADSC)) {};			// wait til finish conversion
 	PTC1_VAL = (ADCW * 5.0 / 1024.0) * 100;	// convert temperature
 	sprintf(PTC1_char, "%d°C", PTC1_VAL);
 		//ADC7
-	ADMUX	|=	((1<<MUX1)	|	(1<<MUX2)	|	(1<<MUX3));
+	ADMUX	|=	(1<<MUX0);
 	ADCSRA	|=	(1<<ADSC);
 	while (ADCSRA & (1<<ADSC)) {};
 	PTC2_VAL = (ADCW * 5.0 / 1024.0) * 100;
@@ -372,18 +372,9 @@ int main(void)
 	
     while (1) 
     {
-
-		/*setPinHigh(VO);
-		_delay_ms(100);
-		setPinLow(VO);
-		_delay_ms(100);*/
-		
-		//ADC_READ_PRINT();	//temperature
-
-		//OCR0A = 30;
 		
 		cnt++;
-		if (cnt > 1000)
+		if (cnt > 100)
 		{
 			ADC_READ();
 			cnt = 0;
@@ -404,13 +395,12 @@ int main(void)
 
 		write_pos_E(avg_tmp); //Med Temp
 
-		if (state = 0){
+		if (state = 0)
 			write_pos_F("Heat"); //state
-		}
-		else if(state = 1) {
+		else if(state = 1)
 			write_pos_F("Vent"); //state
-		}
-		else write_pos_F("Off"); //state
+		else
+			write_pos_F("Off"); //state
 	
 		write_help();
 		
