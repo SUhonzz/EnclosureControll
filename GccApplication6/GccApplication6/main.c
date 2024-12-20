@@ -145,36 +145,18 @@ void UART_SHOW_DATA()
 	}
 }
 
-// PWM
+// Hardware PWM
 void PWM_INIT()
 {
-	TCCR0A |= ((1<<WGM00)	|	(1<<WGM01));	// Fast PWM 8Bit
-	TCCR0A |= ((1<<COM0A0)	|	(1<<COM0A1));	// Inverting Mode - common anode
-	TCCR0A |= ((1<<CS00)	|	(1<<CS02));		// Prescaler 1024
-}
-void TIMER_INIT()
-{
-	TCCR1A = 0;									// normal mode
-	TCCR1B |= ((1<<CS11)	|	(1<<CS10));		// Prescaler 64
-	TIMSK1 |= (1<<TOIE1);						// Enable Timer1 overflow interrupt
-}
-ISR(TIMER1_OVF_vect)
-{
-	Pin LED = createPin("PC3");
-	uint8_t pwm_duty_cycle = 128; // 50% duty cycle if 0-255 range
-	uint16_t pwm_period = 255;     // Full period
-	static uint16_t pwm_counter = 0;
-	
-    if (pwm_counter < pwm_duty_cycle) {
-	    setPinHigh(LED); // Set pin high
-	    } else {
-	    setPinLow(LED); // Set pin low
-    }
+    // Configure Timer1 for Fast PWM, 8-bit
+    TCCR1A |= (1 << WGM10) | (1 << WGM12); // Fast PWM mode, 8-bit
+    TCCR1A |= (1 << COM1A1); // Clear OC1A on compare match, set OC1A at BOTTOM (non-inverting mode)
 
-    pwm_counter++;
-    if (pwm_counter >= pwm_period) {
-	    pwm_counter = 0; // Reset the counter at the end of the period
-    }
+    // Set prescaler to 1024
+    TCCR1B |= (1 << CS10) | (1 << CS12);
+
+    // Set initial duty cycle
+    OCR1A = 128; // 128/255 = ~50%
 }
 
 // ADC
@@ -236,6 +218,7 @@ void BUTTON_CHECK()
 }
 //works
 
+// OLED
 	// Name
 void write_pos_A(char* str){
 	int posx = 0;
@@ -309,8 +292,7 @@ void write_help()
 	oled_gotoxy(12,6);
 	oled_write("Mode");
 }
-
-// OLED
+	//
 void write_name(char* name) {
 	oled_gotoxy(0,0);
 	static char scroll_name[100]; // Static array to store the name for scrolling
@@ -344,7 +326,9 @@ int main(void)
 {
 	
 	DDRC	|=	(1<<0);		// VENTOUT RELAIS
-	DDRC	|=	(1<<1);		// HEATOUT	
+	DDRC	|=	(1<<1);		// HEATOUT
+	DDRB	|=	(1<<1);		// PWM
+	
 	int cnt = 0;
 	// Inits
     //uart_init(UART_BAUD_SELECT(UART_BAUD_RATE, F_CPU));
@@ -379,7 +363,7 @@ int main(void)
 			ADC_READ();
 			cnt = 0;
 		}
-
+		
 		// Display Menu
 		write_pos_A(name); //NAME
 		
@@ -395,9 +379,9 @@ int main(void)
 
 		write_pos_E(avg_tmp); //Med Temp
 
-		if (state = 0)
+		if (state == 0)
 			write_pos_F("Heat"); //state
-		else if(state = 1)
+		else if(state == 1)
 			write_pos_F("Vent"); //state
 		else
 			write_pos_F("Off"); //state
